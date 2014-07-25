@@ -1,380 +1,1011 @@
-# Automated tag generation and syntax highlighting in Vim
+# Miscellaneous auto-load Vim scripts
 
-[Vim] [vim] has long been my favorite text editor and combined with [Exuberant Ctags] [exctags] it has the potential to provide most of what I expect from an [integrated development environment] [ide]. Exuberant Ctags is the latest incarnation of a [family of computer programs] [ctags] that scan source code files to create an index of identifiers (tags) and where they are defined. Vim uses this index (a so-called tags file) to enable you to jump to the definition of any identifier using the [Control-&#93;] [ctrl_mapping] mapping.
+The vim-misc plug-in contains Vim scripts that are used by most of the [Vim
+plug-ins I've written] [plugins] yet don't really belong with any single one of
+the plug-ins. Basically it's an extended standard library of Vim script
+functions that I wrote during the development of my Vim profile and plug-ins.
 
-When you're familiar with integrated development environments you may recognize this feature as "Go-to definition". One advantage of the combination of Vim and Exuberant Ctags over integrated development environments is that Vim supports syntax highlighting for [over 500 file types] [vim_fts] (!) and Exuberant Ctags can generate tags for [over 40 file types] [ctags_fts] as well...
+In the past these scripts were bundled with each plug-in, however that turned
+out to be a maintenance nightmare for me. That's why the miscellaneous scripts
+are now a proper plug-in with their own page on Vim Online.
 
-There's just one problem: You have to manually keep your tags files up-to-date and this turns out to be a royal pain in the ass! So I set out to write a Vim plug-in that would do this boring work for me. When I finished the plug-in's basic functionality (one automatic command and a call to [system()] [system] later) I became interested in dynamic syntax highlighting, so I added that as well to see if it would work -- surprisingly well I'm happy to report!
+Because the miscellaneous scripts are no longer bundled with my Vim plug-ins,
+users are now required to install the miscellaneous scripts separately. This is
+unfortunate for users who are upgrading from a previous release that did bundle
+the miscellaneous scripts, but I don't see any way around this. Sorry!
 
 ## Installation
 
-*Please note that the vim-easytags plug-in requires my vim-misc plug-in which is separately distributed.*
+Unzip the most recent [ZIP archive] [] file inside your Vim profile
+directory (usually this is `~/.vim` on UNIX and `%USERPROFILE%\vimfiles` on
+Windows), restart Vim and execute the command `:helptags ~/.vim/doc` (use
+`:helptags ~\vimfiles\doc` instead on Windows).
 
-Unzip the most recent ZIP archives of the [vim-easytags] [download-easytags] and [vim-misc] [download-misc] plug-ins inside your Vim profile directory (usually this is `~/.vim` on UNIX and `%USERPROFILE%\vimfiles` on Windows), restart Vim and execute the command `:helptags ~/.vim/doc` (use `:helptags ~\vimfiles\doc` instead on Windows).
+If you prefer you can also use [Pathogen] [], [Vundle] [] or a similar tool to
+install & update the plug-in using a local clone of the git repository.
 
-If you prefer you can also use [Pathogen] [pathogen], [Vundle] [vundle] or a similar tool to install & update the [vim-easytags] [github-easytags] and [vim-misc] [github-misc] plug-ins using a local clone of the git repository.
+## Function documentation
 
-Now try it out: Edit any file type supported by Exuberant Ctags and within ten seconds the plug-in should create/update your tags file (`~/.vimtags` on UNIX, `~/_vimtags` on Windows) with the tags defined in the file you just edited! This means that whatever file you're editing in Vim (as long as it's on the local file system), tags will always be available by the time you need them!
+Below is the documentation for the functions included in the miscellaneous
+scripts. Anyone is free to use these functions in their own Vim profile and/or
+plug-ins. I care about backwards compatibility so won't break it without a good
+reason to do so.
 
-Additionally if the file you just opened is an AWK, C#, C, C++, Objective-C, Java, Lua, PHP, Python, Ruby, Shell, Tcl or Vim source file you should also notice that the function and type names defined in the file have been syntax highlighted.
+For those who are curious: The function descriptions given below were extracted
+from the source code of the miscellaneous scripts using the Python module
+`vimdoctool.py` included in [vim-tools] [].
 
-The `easytags.vim` plug-in is intended to work automatically once it's installed, but if you want to change how it works there are several options you can change and commands you can execute from your own mappings and/or automatic commands. These are all documented below.
+<!-- Start of generated documentation -->
 
-Note that if the plug-in warns you `ctags` isn't installed you'll have to download it from its [homepage] [exctags], or if you're running Debian/Ubuntu you can install it by executing the following shell command:
+The documentation of the 94 functions below was extracted from
+19 Vim scripts on July 19, 2014 at 13:11.
 
-    $ sudo apt-get install exuberant-ctags
+### Asynchronous Vim script evaluation
 
-### A note about Windows
+The `xolox#misc#async#call()` function builds on top of `xolox#misc#os#exec()`
+to support asynchronous evaluation of Vim scripts. The first (and for now
+only) use case is my [vim-easytags][] plug-in which has a bunch of
+conflicting requirements:
 
-On Windows the [system()] [system] function used by `easytags.vim` causes a command prompt window to pop up while Exuberant Ctags is executing. If this bothers you then you can install my [shell.vim] [shell] plug-in which includes a [DLL] [dll] that works around this issue. Once you've installed both plug-ins it should work out of the box! Please let me know if this doesn't work for you.
+1. I want the [vim-easytags][] plug-in to be as portable as possible.
+   Ideally everything is implemented in Vim script because that's the only
+   thing I can rely on to be available for all potential users of the
+   plug-in!
 
-## Commands
+2. Because of point one I've been forced to implement tags file reading,
+   parsing, (fold case) sorting and writing in Vim script. This is fine for
+   small tags files but once they grow to a couple of megabytes it becomes
+   annoying because Vim is unresponsive during tags file updates (key
+   presses are fortunately buffered due to Vim's input model but that
+   doesn't make it a nice user experience :-).
 
-### The `:UpdateTags` command
+3. I could (and did in the past) come up with all sorts of hacks to speed
+   things up without switching away from Vim script, but none of them are
+   going to solve the fundamental problem that Vim's unresponsive hiccups
+   become longer as tags files grow larger.
 
-This command executes [Exuberant Ctags] [exctags] from inside Vim to update the global tags file defined by `g:easytags_file`. When no arguments are given the tags for the current file are updated, otherwise the arguments are passed on to `ctags`. For example when you execute the Vim command `:UpdateTags -R ~/.vim` (or `:UpdateTags -R ~\vimfiles` on Windows) the plug-in will execute `ctags -R ~/.vim` for you (with some additional arguments, see the troubleshooting section "`:HighlightTags` only works for the tags file created by `:UpdateTags`" for more information).
+By now it should be clear where this is heading: _Why not handle tags file
+updates in a Vim process that runs in the background without blocking the
+Vim process that the user is interacting with?_ It turns out that there are
+quite a few details to take care of, but with those out of the way, it might
+just work! I'm actually hoping to make asynchronous updates the default mode
+in [vim-easytags][]. This means I need this functionality to be as
+portable and robust as possible.
 
-When you execute this command like `:UpdateTags!` (including the bang!) then all tags whose files are missing will be filtered from the global tags file.
+**Status:** This code has seen little testing so I wouldn't trust it too
+much just yet. On the other hand, as I said, my intention is to make this
+functionality as portable and robust as possible. You be the judge :-).
 
-Note that this command will be executed automatically every once in a while, assuming you haven't changed `g:easytags_on_cursorhold`.
+[vim-easytags]: http://peterodding.com/code/vim/easytags/
 
-### The `:HighlightTags` command
+#### The `xolox#misc#async#call()` function
 
-When you execute this command while editing one of the supported file types (see above) the relevant tags in the current file are highlighted. The tags to highlight are gathered from all tags files known to Vim (through the ['tags' option] [tags_opt]).
+Call a Vim script function asynchronously by starting a hidden Vim process
+in the background. Once the function returns the hidden Vim process
+terminates itself. This function takes a single argument which is a
+dictionary with the following key/value pairs:
 
-Note that this command will be executed automatically every once in a while, assuming you haven't changed `g:easytags_on_cursorhold`.
+ - **function** (required): The name of the Vim function to call inside
+   the child process (a string). I suggest using an [autoload][] function
+   for this, see below.
 
-## Options
+ - **arguments** (optional): A list of arguments to pass to the function.
+   This list is serialized to a string using [string()][] and deserialized
+   using [eval()][].
 
-The easytags plug-in should work out of the box but if you don't like the default configuration you can change how it works by setting the variables documented below. Most of these variables can also be changed for specific files by setting a buffer local variable instead of the global variable. For example to disable automatic highlighting (enabled by default) only in Python files you can add the following line to your [vimrc script] [vimrc]:
+ - **callback** (optional): The name of a Vim function to call in the
+   parent process when the child process has completed (a string).
 
-    :autocmd FileType python let b:easytags_auto_highlight = 0
+ - **clientserver** (optional): If this is true (1) the child process will
+   notify the parent process when it has finished (the default is true).
+   This works using Vim's client/server support which is not always
+   available. As a fall back Vim's [CursorHold][] automatic command is
+   also supported (although the effect is not quite as instantaneous :-).
 
-Note that buffer local variables always override global variables, so if you want to undo this for a specific file you have to use [:unlet] [unlet]:
+This functionality is experimental and non trivial to use, so consider
+yourself warned :-).
 
-    :unlet b:easytags_auto_highlight
+**Limitations**
 
-### The `g:easytags_cmd` option
+I'm making this functionality available in [vim-misc][] because I think it
+can be useful to other plug-ins, however if you are going to use it you
+should be aware of the following limitations:
 
-The plug-in will try to determine the location where Exuberant Ctags is installed on its own but this might not always work because any given executable named `ctags` in your `$PATH` might not in fact be Exuberant Ctags but some older, more primitive `ctags` implementation which doesn't support the same command line options and thus breaks the easytags plug-in. If this is the case you can set the global variable `g:easytags_cmd` to the location where you've installed Exuberant Ctags, e.g.:
+ - Because of the use of multiple processes this functionality is only
+   suitable for 'heavy' tasks.
 
-    :let g:easytags_cmd = '/usr/local/bin/ctags'
+ - The function arguments are serialized to a string which is passed to
+   the hidden Vim process as a command line argument, so the amount of
+   data you can pass will be limited by your operating environment.
 
-If you rely entirely on language-specific configuration and don't have a general ctags program, set this to the empty string.
+ - The hidden Vim process is explicitly isolated from the user in several
+   ways (see below for more details). This is to make sure that the hidden
+   Vim processes are fast and don't clobber the user's editing sessions in
+   any way.
 
-### The `g:easytags_async` option
+**Changes to how Vim normally works**
 
-By default vim-easytags runs Exuberant Ctags and updates your tags file in the foreground, blocking Vim in the process. As your tags files get larger this becomes more annoying. It has been the number one complaint about vim-easytags since I published the first release online.
+You have to be aware that the hidden Vim process is initialized in a
+specific way that is very different from your regular Vim editing
+sessions:
 
-In version 3.5 of the vim-easytags plug-in support for asynchronous tags file updates was added. It's not enabled by default yet because I want to make sure I'm not breaking the plug-in for the majority of users. However after I've gathered some feedback I definitely want to make this the default mode.
+ - Your [vimrc][] file is ignored using the `-u NONE` command line option.
 
-By setting this option to true (1) you enable asynchronous tags file updates. Good luck! ;-)
+ - Your [gvimrc][] file (if you even knew it existed ;-) is ignored using
+   the `-U NONE` command line option.
 
-Note that asynchronous updates on Windows currently require the installation of my [vim-shell] [shell] plug-in (for obscure technical reasons that I want to fix but don't know how yet).
+ - Plug-in loading is skipped using the `--noplugin` command line option.
 
-### The `g:easytags_syntax_keyword` option
+ - Swap files (see [swap-file][]) are disabled using the `-n` command line
+   option. This makes sure asynchronous Vim processes don't disturb the
+   user's editing session.
 
-When you look into how the dynamic syntax highlighting in the vim-easytags plug-in works you'll realize that vim-easytags is really abusing Vim's syntax highlighting engine. This can cause Vim to slow down to a crawl, depending on how big your tags files are. To make things worse in Vim 7.4 a new regex engine was introduced which exacerbates the problem (the patterns generated by vim-easytags bring out the worst of the new regex engine).
+ - Your [viminfo][] file is ignored using the `-i NONE` command line
+   option. Just like with swap files this makes sure asynchronous Vim
+   processes don't disturb the user's editing session.
 
-Since version 3.6 the vim-easytags plug-in tries to squeeze as much performance as possible out of Vim by using keyword highlighting where this is possible without sacrificing accuracy. If your Vim's syntax highlighting is still too slow you can add the following to your [vimrc script] [vimrc]:
+ - No-compatible mode is enabled using the `-N` command line option
+   (usually the existence of your vimrc script would have achieved the
+   same effect but since we disable loading of your vimrc we need to spell
+   things out for Vim).
 
-    let g:easytags_syntax_keyword = 'always'
+**Use an auto-load function**
 
-The default value of this option is 'auto' which means to use keyword highlighting where this is possible without sacrificing accuracy. By changing it to 'always' you're telling vim-easytags to sacrifice accuracy in order to gain performance. Try it out and see what works best for you.
+The function you want to call is identified by its name which has to be
+defined, but I just explained above that all regular initialization is
+disabled for asynchronous Vim processes, so what gives? The answer is to
+use an [autoload][] function. This should work fine because the
+asynchronous Vim process 'inherits' the value of the ['runtimepath'][]
+option from your editing session.
 
-Please note that right now this 'feature' is not integrated with the "accelerated Python syntax highlighting" feature, because I'm considering ripping that out and replacing it with a *fast* Vim script implementation.
+['runtimepath']: http://vimdoc.sourceforge.net/htmldoc/options.html#'runtimepath'
+[autoload]: http://vimdoc.sourceforge.net/htmldoc/eval.html#autoload
+[CursorHold]: http://vimdoc.sourceforge.net/htmldoc/autocmd.html#CursorHold
+[eval()]: http://vimdoc.sourceforge.net/htmldoc/eval.html#eval()
+[gvimrc]: http://vimdoc.sourceforge.net/htmldoc/gui.html#gvimrc
+[string()]: http://vimdoc.sourceforge.net/htmldoc/eval.html#string()
+[swap-file]: http://vimdoc.sourceforge.net/htmldoc/recover.html#swap-file
+[vim-misc]: http://peterodding.com/code/vim/misc/
+[viminfo]: http://vimdoc.sourceforge.net/htmldoc/starting.html#viminfo
+[vimrc]: http://vimdoc.sourceforge.net/htmldoc/starting.html#vimrc
 
-### The `g:easytags_languages` option
+#### The `xolox#misc#async#inside_child()` function
 
-Exuberant Ctags supports many languages and can be extended via regular expression patterns, but for some languages separate tools with ctags-compatible output exist (e.g. [jsctags] [jsctags] for Javascript). To use these, the executable and its arguments must be configured:
+Entry point inside the hidden Vim process that runs in the background.
+Invoked indirectly by `xolox#misc#async#call()` because it runs a command
+similar to the following:
 
-    let g:easytags_languages = {
-    \   'language': {
-    \     'cmd': g:easytags_cmd,
-    \	    'args': [],
-    \	    'fileoutput_opt': '-f',
-    \	    'stdout_opt': '-f-',
-    \	    'recurse_flag': '-R'
-    \   }
-    \}
+    vim --cmd 'call xolox#misc#async#inside_child(...)'
 
-Each key is a special language definition. The key is a Vim file type in lowercase. The above snippet shows the defaults; you only need to specify options that differ.
+This function is responsible for calling the user defined function,
+capturing exceptions and reporting the results back to the parent Vim
+process using Vim's client/server support or a temporary file.
 
-### The `g:easytags_file` option
+#### The `xolox#misc#async#callback_to_parent()` function
 
-As mentioned above the plug-in will store your tags in `~/.vimtags` on UNIX and `~/_vimtags` on Windows. To change the location of this file, set the global variable `g:easytags_file`, e.g.:
+When Vim was compiled with client/server support this function (in the
+parent process) will be called by `xolox#misc#async#inside_child()` (in
+the child process) after the user defined function has returned. This
+enables more or less instant callbacks after running an asynchronous
+function.
 
-    :let g:easytags_file = '~/.vim/tags'
+#### The `xolox#misc#async#periodic_callback()` function
 
-A leading `~` in the `g:easytags_file` variable is expanded to your current home directory (`$HOME` on UNIX, `%USERPROFILE%` on Windows).
+When client/server support is not being used the vim-misc plug-in
+improvises: It uses Vim's [CursorHold][] event to periodically check if an
+asynchronous process has written its results to one of the expected
+temporary files. If a response is found the temporary file is read and
+deleted and then `xolox#misc#async#callback_to_parent()` is called to
+process the response.
 
-### The `g:easytags_dynamic_files` option
+[CursorHold]: http://vimdoc.sourceforge.net/htmldoc/autocmd.html#CursorHold
 
-By default `:UpdateTags` only writes to the global tags file, but it can be configured to look for project specific tags files by adding the following lines to your [vimrc script] [vimrc]:
+### Handling of special buffers
 
-    :set tags=./tags;
-    :let g:easytags_dynamic_files = 1
+The functions defined here make it easier to deal with special Vim buffers
+that contain text generated by a Vim plug-in. For example my [vim-notes
+plug-in] [vim-notes] generates several such buffers:
 
-You can change the name of the tags file, the important thing is that it's relative to your working directory or the buffer (using a leading `./`). When `g:easytags_dynamic_files` is set to 1 the easytags plug-in will write to the first existing tags file seen by Vim (based on the ['tags' option] [tags_opt]). In other words: If a project specific tags file is found it will be used, otherwise the plug-in falls back to the global tags file (or a file type specific tags file).
+- [:RecentNotes] [RecentNotes] lists recently modified notes
+- [:ShowTaggedNotes] [ShowTaggedNotes] lists notes grouped by tags
+- etc.
 
-If you set `g:easytags_dynamic_files` to 2 the easytags plug-in will automatically create project specific tags based on the first name in the 'tags' option. In this mode the the global tags file or file type specific tags files are only used for directories where you don't have write permissions.
+Because the text in these buffers is generated, Vim shouldn't bother with
+swap files and it should never prompt the user whether to save changes to
+the generated text.
 
-The ['tags' option] [tags_opt] is reevaluated each time the plug-in runs, so which tags file is selected can differ depending on the buffer and working directory.
+[vim-notes]: http://peterodding.com/code/vim/notes/
+[RecentNotes]: http://peterodding.com/code/vim/notes/#recentnotes_command
+[ShowTaggedNotes]: http://peterodding.com/code/vim/notes/#showtaggednotes_command
 
-### The `g:easytags_by_filetype` option
+#### The `xolox#misc#buffer#is_empty()` function
 
-By default all tags are stored in a global tags file. When the tags file grows beyond a certain size Vim will be slowed down by the easytags plug-in because it has to read and process a large number of tags very frequently.
+Checks if the current buffer is an empty, unchanged buffer which can be
+reused. Returns 1 if an empty buffer is found, 0 otherwise.
 
-To avoid this problem you can set `g:easytags_by_filetype` to the path of an existing directory. The easytags plug-in will create separate tags files for each file type in the configured directory. These tags files are automatically registered by the easytags plug-in when the file type of a buffer is set.
+#### The `xolox#misc#buffer#prepare()` function
 
-Note that the `g:easytags_dynamic_files` option takes precedence over this option.
+Open a special buffer, i.e. a buffer that will hold generated contents,
+not directly edited by the user. The buffer can be customized by passing a
+dictionary with the following key/value pairs as the first argument:
 
-If you already have a global tags file you can create file type specific tags files from the global tags file using the command `:TagsByFileType`.
+- **name** (required): The base name of the buffer (i.e. the base name of
+  the file loaded in the buffer, even though it isn't really a file and
+  nothing is really 'loaded' :-)
+- **path** (required): The pathname of the buffer. May be relevant if
+  [:lcd] [lcd] or ['autochdir'] [acd] is being used.
 
-### The `g:easytags_events` option
+[lcd]: http://vimdoc.sourceforge.net/htmldoc/editing.html#:lcd
+[acd]: http://vimdoc.sourceforge.net/htmldoc/options.html#'autochdir'
 
-This option can be used to customize the events that trigger the automatic updating and highlighting performed by the easytags plug-in. The `g:easytags_always_enabled` and `g:easytags_on_cursorhold` options are more user friendly but limited ways to accomplish the same thing.
+#### The `xolox#misc#buffer#lock()` function
 
-Here's an example: Say you want the easytags plug-in to automatically update & highlight tags for the current file right after you save the file. You can accomplish this by adding the following line to your [vimrc script] [vimrc]:
+Lock a special buffer so that its contents can no longer be edited.
 
-    :let g:easytags_events = ['BufWritePost']
+#### The `xolox#misc#buffer#unlock()` function
 
-Note that if you set `g:easytags_events` in your [vimrc script] [vimrc], the values of the options `g:easytags_always_enabled` and `g:easytags_on_cursorhold` will be ignored completely.
+Unlock a special buffer so that its content can be updated.
 
-### The `g:easytags_always_enabled` option
+### Tab completion for user defined commands
 
-By default the plug-in automatically generates and highlights tags when you stop typing for a few seconds (this works using the [CursorHold] [cursorhold] automatic command). This means that when you edit a file, the dynamic highlighting won't appear until you pause for a moment. If you don't like this you can configure the plug-in to always enable dynamic highlighting:
+#### The `xolox#misc#complete#keywords()` function
 
-    :let g:easytags_always_enabled = 1
+This function can be used to perform keyword completion for user defined
+Vim commands based on the contents of the current buffer. Here's an
+example of how you would use it:
 
-Be warned that after setting this option you'll probably notice why it's disabled by default: Every time you edit a file in Vim, the plug-in will first run Exuberant Ctags and then highlight the tags, and this slows Vim down quite a lot. I have some ideas on how to improve this latency by running Exuberant Ctags in the background so stay tuned!
+    :command -nargs=* -complete=customlist,xolox#misc#complete#keywords MyCmd call s:MyCmd(<f-args>)
 
-Note: If you change this option it won't apply until you restart Vim, so you'll have to set this option in your [vimrc script] [vimrc].
+### Rate limiting for Vim's CursorHold event
 
-### The `g:easytags_on_cursorhold` option
+Several of my Vim plug-ins (e.g. [vim-easytags][], [vim-notes][] and
+[vim-session][]) use Vim's [CursorHold][] and [CursorHoldI][] events to
+perform periodic tasks when the user doesn't press any keys for a couple of
+seconds. These events by default fire after four seconds, this is
+configurable using Vim's ['updatetime'][] option. The problem that this
+script solves is that there are Vim plug-ins which set the ['updatetime'][]
+option to unreasonably low values, thereby breaking my Vim plug-ins and
+probably a lot of other Vim plug-ins out there. When users complain about
+this I can tell them that another Vim plug-in is to blame, but users don't
+care for the difference, their Vim is broken! So I implemented a workaround.
+This script enables registration of [CursorHold][] event handlers with a
+configurable interval (expressed in seconds). The event handlers will be
+called no more than once every interval.
 
-As I explained above the plug-in by default doesn't update or highlight your tags until you stop typing for a moment. The plug-in tries hard to do the least amount of work possible in this break but it might still interrupt your workflow. If it does you can disable the periodic update:
+['updatetime']: http://vimdoc.sourceforge.net/htmldoc/options.html#'updatetime'
+[CursorHold]: http://vimdoc.sourceforge.net/htmldoc/autocmd.html#CursorHold
+[CursorHoldI]: http://vimdoc.sourceforge.net/htmldoc/autocmd.html#CursorHoldI
+[vim-easytags]: http://peterodding.com/code/vim/easytags/
+[vim-notes]: http://peterodding.com/code/vim/notes/
+[vim-session]: http://peterodding.com/code/vim/session/
 
-    :let g:easytags_on_cursorhold = 0
+#### The `xolox#misc#cursorhold#register()` function
 
-Note: Like the `g:easytags_always_enabled` option, if you change this option it won't apply until you restart Vim, so you'll have to set this option in your [vimrc script] [vimrc].
+Register a [CursorHold][] event handler with a custom interval. This
+function takes a single argument which is a dictionary with the following
+fields:
 
-### The `g:easytags_updatetime_min` option
+ - **function** (required): The name of the event handler function (a
+   string).
 
-Vim's ['updatetime'] [updatetime] option controls how often the easytags plug-in is automatically executed. A lot of popular Vim plug-ins manipulate this option to control how often they are called. Unfortunately some of those plug-ins set ['updatetime'] [updatetime] to a very low value (less than a second) and this can break the easytags plug-in. Because of this the easytags plug-in compensates by keeping track of when it was last executed.
+ - **arguments** (optional): A list of arguments to pass to the event
+   handler function (defaults to an empty list).
 
-The default value of Vim's ['updatetime] [updatetime] option *and* the `g:easytags_updatetime_min` option is 4000 milliseconds (4 seconds).
+ - **interval** (optional): The number of seconds between calls to the
+   event handler (defaults to 4).
 
-If you know what you're doing and you really want the easytags plug-in to be executed more than once every 4 seconds you can lower the minimum acceptable updatetime by setting `g:easytags_updatetime_min` to the number of milliseconds (an integer).
+#### The `xolox#misc#cursorhold#autocmd()` function
 
-Note that although `g:easytags_updatetime_min` counts in milliseconds, the easytags plug-in does not support subsecond granularity because it is limited by Vim's [localtime()] [localtime] function which has one-second resolution.
+The 'top level event handler' that's called by Vim whenever the
+[CursorHold][] or [CursorHoldI][] event fires. It iterates through the
+event handlers registered using `xolox#misc#cursorhold#register()` and
+calls each event handler at the appropriate interval, keeping track of
+the time when each event handler was last run.
 
-### The `g:easytags_auto_update` option
+### String escaping functions
 
-By default the plug-in automatically updates and highlights your tags when you stop typing for a moment. If you want to disable automatic updating while keeping automatic highlighting enabled you can set this option to false:
+#### The `xolox#misc#escape#pattern()` function
 
-    :let g:easytags_auto_update = 0
+Takes a single string argument and converts it into a [:substitute]
+[subcmd] / [substitute()] [subfun] pattern string that matches the given
+string literally.
 
-### The `g:easytags_auto_highlight` option
+[subfun]: http://vimdoc.sourceforge.net/htmldoc/eval.html#substitute()
+[subcmd]: http://vimdoc.sourceforge.net/htmldoc/change.html#:substitute
 
-By default the plug-in automatically updates and highlights your tags when you stop typing for a moment. If you want to disable automatic highlighting while keeping automatic updating enabled you can set this option to false:
+#### The `xolox#misc#escape#substitute()` function
 
-    :let g:easytags_auto_highlight = 0
+Takes a single string argument and converts it into a [:substitute]
+[subcmd] / [substitute()] [subfun] replacement string that inserts the
+given string literally.
 
-### The `g:easytags_autorecurse` option
+#### The `xolox#misc#escape#shell()` function
 
-When the `:UpdateTags` command is executed automatically or without arguments, it defaults to updating just the tags for the current file. If you'd rather have it recursively scan everything below the directory of the current file then set this option to true (1):
+Takes a single string argument and converts it into a quoted command line
+argument.
 
-    :let g:easytags_autorecurse = 1
+I was going to add a long rant here about Vim's ['shellslash' option]
+[shellslash], but really, it won't make any difference. Let's just suffice
+to say that I have yet to encounter a single person out there who uses
+this option for its intended purpose (running a UNIX style shell on
+Microsoft Windows).
 
-You have to explicitly enable this option because it should only be used while navigating around small directory trees. Imagine always having this option enabled and then having to edit a file in e.g. the root of your home directory: The `easytags.vim` plug-in would freeze Vim for a long time while you'd have to wait for Exuberant Ctags to scan thousands of files...
+[shellslash]: http://vimdoc.sourceforge.net/htmldoc/options.html#'shellslash'
 
-Note that when you enable this option the `easytags.vim` plug-in might ignore other options like `g:easytags_resolve_links`. This is an implementation detail which I intend to fix.
+### Human friendly string formatting for Vim
 
-### The `g:easytags_include_members` option
+#### The `xolox#misc#format#pluralize()` function
 
-Exuberant Ctags knows how to generate tags for struct/class members in C++ and Java source code but doesn't do so by default because it can more than double the size of your tags files, thus taking much longer to read/write the tags file. When you enable the `g:easytags_include_members` option from your [vimrc script] [vimrc] (before the `easytags.vim` plug-in is loaded):
+Concatenate a counter (the first argument, expected to be an integer) with
+a singular or plural label (the second and third arguments, both expected
+to be strings).
 
-    :let g:easytags_include_members = 1
+#### The `xolox#misc#format#timestamp()` function
 
-Exuberant Ctags will be instructed to include struct/class members using the `--extra=+q` command line argument and the `easytags.vim` plug-in will highlight them using the `cMember` highlighting group. Because most color schemes don't distinguish the [Identifier and Type] [syn_groups] highlighting groups all members will now probably look like type definitions. You can change that by executing either of the following Vim commands (from your vimrc script, a file type plug-in, etc.):
+Format a time stamp (a string containing a formatted floating point
+number) into a human friendly format, for example 70 seconds is phrased as
+"1 minute and 10 seconds".
 
-    " If you like one of the existing styles you can link them:
-    highlight link cMember Special
+### List handling functions
 
-    " You can also define your own style if you want:
-    highlight cMember gui=italic
+#### The `xolox#misc#list#unique()` function
 
-### The `g:easytags_resolve_links` option
+Remove duplicate values from the given list in-place (preserves order).
 
-UNIX has [symbolic links] [slinks] and [hard links] [hlinks], both of which conflict with the concept of having one unique location for every identifier. With regards to hard links there's not much anyone can do, but because I use symbolic links quite a lot I've added this option. It's disabled by default since it has a small performance impact and might not do what unknowing users expect it to: When you enable this option the plug-in will resolve symbolic links in pathnames, which means your tags file will only contain entries with [canonical pathnames] [canon]. To enable this option (which I strongly suggest doing when you run UNIX and use symbolic links) execute the following Vim command:
+#### The `xolox#misc#list#binsert()` function
 
-    :let g:easytags_resolve_links = 1
+Performs in-place binary insertion, which depending on your use case can
+be more efficient than calling Vim's [sort()] [sort] function after each
+insertion (in cases where a single, final sort is not an option). Expects
+three arguments:
 
-### The `g:easytags_suppress_ctags_warning` option
+1. A list
+2. A value to insert
+3. 1 (true) when case should be ignored, 0 (false) otherwise
 
-If this is set and not false, it will suppress the warning on startup if ctags is not found or not recent enough.
+[sort]: http://vimdoc.sourceforge.net/htmldoc/eval.html#sort()
 
-    :let g:easytags_suppress_ctags_warning = 1
+### Functions to interact with the user
 
-## Customizing the easytags plug-in
+#### The `xolox#misc#msg#info()` function
 
-Advanced users may wish to customize how the easytags plug-in works beyond the point of changing configuration defaults. This section contains some hints about this. If you have suggestions, please feel free to submit them.
+Show a formatted informational message to the user.
 
-### Passing custom command line arguments to Exuberant Ctags
+This function has the same argument handling as Vim's [printf()] []
+function with one notable difference: Any arguments which are not numbers
+or strings are coerced to strings using Vim's [string()] [] function.
 
-You may want to run Exuberant Ctags with specific command line options, for example the [code_complete] [code_complete] plug-in requires the signature field to be present. To do this you can create a configuration file for Exuberant Ctags, e.g. `~/.ctags` on UNIX or `%USERPROFILE%\ctags.cnf` on Windows. The file should contain one command line option per line. See the [Exuberant Ctags manual] [ctags_cfg] for details.
+In the case of `xolox#misc#msg#info()`, automatic string coercion simply
+makes the function a bit easier to use.
 
-### Update & highlight tags immediately after save
+[printf()]: http://vimdoc.sourceforge.net/htmldoc/eval.html#printf()
+[string()]: http://vimdoc.sourceforge.net/htmldoc/eval.html#string()
 
-By default the easytags plug-in automatically updates & highlights tags for the current file after several seconds of inactivity. This is done to prevent the easytags plug-in from interrupting your workflow.
+#### The `xolox#misc#msg#warn()` function
 
-If you want the easytags plug-in to automatically update & highlight tags for the current file right after you save the file, you can add the following line to your [vimrc script] [vimrc]:
+Show a formatted warning message to the user.
 
-    :let g:easytags_events = ['BufWritePost']
+This function has the same argument handling as the
+`xolox#misc#msg#info()` function.
 
-### How to customize the highlighting colors?
+#### The `xolox#misc#msg#debug()` function
 
-The easytags plug-in defines new highlighting groups for dynamically highlighted tags. These groups are linked to Vim's default groups so that they're colored out of the box, but if you want you can change the styles. To do so use a `highlight` command such as the ones given a few paragraphs back. Of course you'll need to change the group name. Here are the group names used by the easytags plug-in:
+Show a formatted debugging message to the user, *if the user has enabled
+increased verbosity by setting Vim's ['verbose'] [] option to one
+(1) or higher*.
 
- * **AWK**: `awkFunctionTag`
- * **C#:** `csClassOrStructTag`, `csMethodTag`
- * **C, C++, Objective C:** `cTypeTag`, `cEnumTag`, `cPreProcTag`, `cFunctionTag`, `cMemberTag`
- * **Java:** `javaClassTag`, `javaInterfaceTag`, `javaMethodTag`
- * **Lua:** `luaFuncTag`
- * **PHP:** `phpFunctionsTag`, `phpClassesTag`
- * **Python:** `pythonFunctionTag`, `pythonMethodTag`, `pythonClassTag`
- * **Ruby:** `rubyModuleNameTag`, `rubyClassNameTag`, `rubyMethodNameTag`
- * **Shell**: `shFunctionTag`
- * **Tcl**: `tclCommandTag`
- * **Vim:** `vimAutoGroupTag`, `vimCommandTag`, `vimFuncNameTag`, `vimScriptFuncNameTag`
+This function has the same argument handling as the
+`xolox#misc#msg#info()` function.
 
-As you can see each of these names ends in `Tag` to avoid conflicts with the syntax modes shipped with Vim. And about the singular/plural confusion: I've tried to match the existing highlighting groups defined by popular syntax modes (except of course for the `Tag` suffix).
+In the case of `xolox#misc#msg#debug()`, automatic string coercion
+provides lazy evaluation in the sense that complex data structures are
+only converted to strings when the user has enabled increased verbosity.
 
-## Faster syntax highlighting using Python
+['verbose']: http://vimdoc.sourceforge.net/htmldoc/options.html#'verbose'
 
-The Vim script implementation of dynamic syntax highlighting is quite slow on large tags files. When the Python Interface to Vim is enabled the easytags plug-in will therefor automatically use a Python script that performs dynamic syntax highlighting about twice as fast as the Vim script implementation. The following options are available to change the default configuration.
+### Integration between Vim and its environment
 
-### The `g:easytags_python_enabled` option
+#### The `xolox#misc#open#file()` function
 
-To disable the Python implementation of dynamic syntax highlighting you can set this option to false (0).
+Given a pathname or URL as the first argument, this opens the file with
+the program associated with the file type. So for example a text file
+might open in Vim, an `*.html` file would probably open in your web
+browser and a media file would open in a media player.
 
-### The `g:easytags_python_script` option
+This should work on Windows, Mac OS X and most Linux distributions. If
+this fails to find a file association, you can pass one or more external
+commands to try as additional arguments. For example:
 
-This option defines the pathname of the script that contains the Python implementation of dynamic syntax highlighting.
+    :call xolox#misc#open#file('/path/to/my/file', 'firefox', 'google-chrome')
 
-## Troubleshooting
+This generally shouldn't be necessary but it might come in handy now and
+then.
 
-## vim-easytags is slow!
+#### The `xolox#misc#open#url()` function
 
-Yes, I know. I'm trying to make it faster but that's far from trivial. In the process of trying to speed up vim-easytags I've added reporting of elapsed time in several ways. If Vim seems very slow and you suspect this plug-in might be the one to blame, increase Vim's verbosity level:
+Given a URL as the first argument, this opens the URL in your preferred or
+best available web browser:
 
-    :set vbs=1
+- In GUI environments a graphical web browser will open (or a new tab will
+  be created in an existing window)
+- In console Vim without a GUI environment, when you have any of `lynx`,
+  `links` or `w3m` installed it will launch a command line web browser in
+  front of Vim (temporarily suspending Vim)
 
-Every time the plug-in executes it will time how long the execution takes and add the results to Vim's message history, which you can view by executing the [:messages] [messages] command. If you want a more fine grained impression of the time spent by vim-easytags on various operations you can call the `xolox#easytags#why_so_slow()` function:
+### Vim and plug-in option handling
 
-    :call xolox#easytags#why_so_slow()
-    easytags.vim 3.6.4: Timings since you started Vim:
-     - 0.094937 seconds updating tags
-     - 1.850201 seconds highlighting tags
-     - 0.035167 seconds highlighting tags using ':syntax match')
-     - 0.493910 seconds highlighting tags using ':syntax keyword')
-     - 0.413160 seconds filtering tags for highlighting (stage 1)
-     - 0.141747 seconds filtering tags for highlighting (stage 2)
+#### The `xolox#misc#option#get()` function
 
-### `:HighlightTags` only works for the tags file created by `:UpdateTags`
+Expects one or two arguments: 1. The name of a variable and 2. the default
+value if the variable does not exist.
 
-If you want to create tags files and have their tags highlighted by the `easytags.vim` plug-in then you'll have to create the tags file with certain arguments to Exuberant Ctags:
+Returns the value of the variable from a buffer local variable, global
+variable or the default value, depending on which is defined.
 
-    $ ctags --fields=+l --c-kinds=+p --c++-kinds=+p ...
+This is used by some of my Vim plug-ins for option handling, so that users
+can customize options for specific buffers.
 
-The `--fields=+l` argument makes sure that Exuberant Ctags includes a `language:...` property with each entry in the tags file. This is required by the `:HighlightTags` command so it can filter tags by their file type. The other two arguments make sure Exuberant Ctags generates tags for function prototypes in C/C++ source code.
+#### The `xolox#misc#option#split()` function
 
-If you have the `g:easytags_include_members` option enabled (its off by default) then you'll also need to add the `--extra=+q` argument so that Exuberant Ctags generates tags for structure/class members.
+Given a multi-value Vim option like ['runtimepath'] [rtp] this returns a
+list of strings. For example:
 
-### The plug-in complains that Exuberant Ctags isn't installed
+    :echo xolox#misc#option#split(&runtimepath)
+    ['/home/peter/Projects/Vim/misc',
+     '/home/peter/Projects/Vim/colorscheme-switcher',
+     '/home/peter/Projects/Vim/easytags',
+     ...]
 
-After a Mac OS X user found out the hard way that the `ctags` executable isn't always Exuberant Ctags and we spend a few hours debugging the problem I added proper version detection: The plug-in executes `ctags --version` when Vim is started to verify that Exuberant Ctags 5.5 or newer is installed. If it isn't Vim will show the following message on startup:
+[rtp]: http://vimdoc.sourceforge.net/htmldoc/options.html#'runtimepath'
 
-    easytags.vim: Plug-in not loaded because Exuberant Ctags isn't installed!
-    Please download & install Exuberant Ctags from http://ctags.sf.net
+#### The `xolox#misc#option#join()` function
 
-If the installed Exuberant Ctags version is too old the plug-in will complain:
+Given a list of strings like the ones returned by
+`xolox#misc#option#split()`, this joins the strings together into a
+single value that can be used to set a Vim option.
 
-    easytags.vim: Plug-in not loaded because Exuberant Ctags 5.5
-    or newer is required while you have version %s installed!
+#### The `xolox#misc#option#split_tags()` function
 
-If you have the right version of Exuberant Ctags installed but the plug-in still complains, try executing the following command from inside Vim:
+Customized version of `xolox#misc#option#split()` with specialized
+handling for Vim's ['tags' option] [tags].
 
-    :!which ctags
+[tags]: http://vimdoc.sourceforge.net/htmldoc/options.html#'tags'
 
-If this doesn't print the location where you installed Exuberant Ctags it means your system already had a `ctags` executable but it isn't compatible with Exuberant Ctags 5.5 and you'll need to set the `g:easytags_cmd` option (see above) so the plug-in knows which `ctags` to run.
+#### The `xolox#misc#option#join_tags()` function
 
-### Vim locks up while the plug-in is running
+Customized version of `xolox#misc#option#join()` with specialized
+handling for Vim's ['tags' option] [tags].
 
-Once or twice now in several years I've experienced Exuberant Ctags getting into an infinite loop when given garbage input. In my case this happened by accident a few days ago :-|. Because my plug-in executes `ctags` in the foreground this will block Vim indefinitely! If this happens you might be able to kill `ctags` by pressing [Control-C] [ctrl_c] but if that doesn't work you can also kill it without stopping Vim using a task manager or the `pkill` command (available on most UNIX systems):
+#### The `xolox#misc#option#eval_tags()` function
 
-    $ pkill -KILL ctags
+Evaluate Vim's ['tags' option] [tags] without looking at the file
+system, i.e. this will report tags files that don't exist yet. Expects
+the value of the ['tags' option] [tags] as the first argument. If the
+optional second argument is 1 (true) only the first match is returned,
+otherwise (so by default) a list with all matches is returned.
 
-### Failed to highlight tags because pattern is too big!
+### Operating system interfaces
 
-If the `easytags.vim` plug-in fails to highlight your tags and the error message mentions that the pattern is too big, your tags file has grown too large for Vim to be able to highlight all tagged identifiers! I've had this happen to me with 50 KB patterns because I added most of the headers in `/usr/include/` to my tags file. Internally Vim raises the error [E339: Pattern too long] [e339] and unfortunately the only way to avoid this problem once it occurs is to reduce the number of tagged identifiers...
+#### The `xolox#misc#os#is_mac()` function
 
-In my case the solution was to move most of the tags from `/usr/include/` over to project specific tags files which are automatically loaded by Vim when I edit files in different projects because I've set the ['tags' option] [tags_opt] as follows:
+Returns 1 (true) when on Mac OS X, 0 (false) otherwise. You would expect
+this to simply check the Vim feature list, but for some obscure reason the
+`/usr/bin/vim` included in Mac OS X (verified on version 10.7.5) returns 0
+(false) in response to `has('mac')`, so we check the output of `uname`
+to avoid false negatives.
 
-    :set tags=./.tags;,~/.vimtags
+#### The `xolox#misc#os#is_win()` function
 
-Once you've executed the above command, Vim will automatically look for a file named `.tags` in the directory of the current file. Because of the `;` Vim also recurses upwards so that you can nest files arbitrarily deep under your project directories.
+Returns 1 (true) when on Microsoft Windows, 0 (false) otherwise.
 
-### The plug-in doesn't seem to work in Cygwin
+#### The `xolox#misc#os#find_vim()` function
 
-If you want to use the plug-in with Vim under [Cygwin] [cygwin], you need to have the Cygwin version of Ctags installed instead of the Windows version (thanks to Alex Zuroff for reporting this!).
+Returns the program name of Vim as a string. On Windows and UNIX this just
+[v:progname] [] as an absolute pathname while on Mac OS X there is
+some special magic to find MacVim's executable even though it's usually
+not on the executable search path. If you want, you can override the
+value returned from this function by setting the global variable
+`g:xolox#misc#os#vim_progname`.
+
+By default the choice of console Vim vs graphical Vim is made based on
+the value of [v:progname] [], but if you have a preference you can pass
+the string `vim` or `gvim` as the first and only argument.
+
+[v:progname]: http://vimdoc.sourceforge.net/htmldoc/eval.html#v:progname
+
+#### The `xolox#misc#os#exec()` function
+
+Execute an external command (hiding the console on Microsoft Windows when
+my [vim-shell plug-in] [vim-shell] is installed).
+
+Expects a dictionary with the following key/value pairs as the first
+argument:
+
+- **command** (required): The command line to execute
+- **async** (optional): set this to 1 (true) to execute the command in the
+  background (asynchronously)
+- **stdin** (optional): a string or list of strings with the input for the
+  external command
+- **check** (optional): set this to 0 (false) to disable checking of the
+  exit code of the external command (by default an exception will be
+  raised when the command fails)
+
+Returns a dictionary with one or more of the following key/value pairs:
+
+- **command** (always available): the generated command line that was used
+  to run the external command
+- **exit_code** (only in synchronous mode): the exit status of the
+  external command (an integer, zero on success)
+- **stdout** (only in synchronous mode): the output of the command on the
+  standard output stream (a list of strings, one for each line)
+- **stderr** (only in synchronous mode): the output of the command on the
+  standard error stream (as a list of strings, one for each line)
+
+[vim-shell]: http://peterodding.com/code/vim/shell/
+
+#### The `xolox#misc#os#can_use_dll()` function
+
+If a) we're on Microsoft Windows, b) the vim-shell plug-in is installed
+and c) the compiled DLL included in vim-shell works, we can use the
+vim-shell plug-in to execute external commands! Returns 1 (true)
+if we can use the DLL, 0 (false) otherwise.
+
+### Pathname manipulation functions
+
+#### The `xolox#misc#path#which()` function
+
+Scan the executable search path (`$PATH`) for one or more external
+programs. Expects one or more string arguments with program names. Returns
+a list with the absolute pathnames of all found programs. Here's an
+example:
+
+    :echo xolox#misc#path#which('gvim', 'vim')
+    ['/usr/local/bin/gvim',
+     '/usr/bin/gvim',
+     '/usr/local/bin/vim',
+     '/usr/bin/vim']
+
+#### The `xolox#misc#path#split()` function
+
+Split a pathname (the first and only argument) into a list of pathname
+components.
+
+On Windows, pathnames starting with two slashes or backslashes are UNC
+paths where the leading slashes are significant... In this case we split
+like this:
+
+- Input: `'//server/share/directory'`
+- Result: `['//server', 'share', 'directory']`
+
+Everything except Windows is treated like UNIX until someone has a better
+suggestion :-). In this case we split like this:
+
+- Input: `'/foo/bar/baz'`
+- Result: `['/', 'foo', 'bar', 'baz']`
+
+To join a list of pathname components back into a single pathname string,
+use the `xolox#misc#path#join()` function.
+
+#### The `xolox#misc#path#join()` function
+
+Join a list of pathname components (the first and only argument) into a
+single pathname string. This is the counterpart to the
+`xolox#misc#path#split()` function and it expects a list of pathname
+components as returned by `xolox#misc#path#split()`.
+
+#### The `xolox#misc#path#directory_separator()` function
+
+Find the preferred directory separator for the platform and settings.
+
+#### The `xolox#misc#path#absolute()` function
+
+Canonicalize and resolve a pathname, *regardless of whether it exists*.
+This is intended to support string comparison to determine whether two
+pathnames point to the same directory or file.
+
+#### The `xolox#misc#path#relative()` function
+
+Make an absolute pathname (the first argument) relative to a directory
+(the second argument).
+
+#### The `xolox#misc#path#merge()` function
+
+Join a directory pathname and filename into a single pathname.
+
+#### The `xolox#misc#path#commonprefix()` function
+
+Find the common prefix of path components in a list of pathnames.
+
+#### The `xolox#misc#path#starts_with()` function
+
+Check whether the first pathname starts with the second pathname (expected
+to be a directory). This does not perform a regular string comparison;
+first it normalizes both pathnames, then it splits them into their
+pathname segments and then it compares the segments.
+
+#### The `xolox#misc#path#encode()` function
+
+Encode a pathname so it can be used as a filename. This uses URL encoding
+to encode special characters.
+
+#### The `xolox#misc#path#decode()` function
+
+Decode a pathname previously encoded with `xolox#misc#path#encode()`.
+
+#### The `xolox#misc#path#is_relative()` function
+
+Returns true (1) when the pathname given as the first argument is
+relative, false (0) otherwise.
+
+#### The `xolox#misc#path#tempdir()` function
+
+Create a temporary directory and return the pathname of the directory.
+
+### Manipulation of UNIX file permissions
+
+Vim's [writefile()][] function cannot set file permissions for newly created
+files and although Vim script has a function to get file permissions (see
+[getfperm()][]) there is no equivalent for changing a file's permissions.
+
+This omission breaks the otherwise very useful idiom of updating a file by
+writing its new contents to a temporary file and then renaming the temporary
+file into place (which is as close as you're going to get to atomically
+updating a file's contents on UNIX) because the file's permissions will not
+be preserved!
+
+**Here's a practical example:** My [vim-easytags][] plug-in writes tags file
+updates to a temporary file and renames the temporary file into place. When
+I use `sudo -s` on Ubuntu Linux it preserves my environment variables so my
+`~/.vimrc` and the [vim-easytags][] plug-in are still loaded. Now when a
+tags file is written the file becomes owned by root (my effective user id in
+the `sudo` session). Once I leave the `sudo` session I can no longer update
+my tags file because it's now owned by root … ಠ_ಠ
+
+[getfperm()]: http://vimdoc.sourceforge.net/htmldoc/eval.html#getfperm()
+[vim-easytags]: http://peterodding.com/code/vim/easytags/
+[writefile()]: http://vimdoc.sourceforge.net/htmldoc/eval.html#writefile()
+
+#### The `xolox#misc#perm#update()` function
+
+Atomically update a file's contents while preserving the owner, group and
+mode. The first argument is the pathname of the file to update (a string).
+The second argument is the list of lines to be written to the file. Writes
+the new contents to a temporary file and renames the temporary file into
+place, thereby preventing readers from reading a partially written file.
+Returns 1 if the file is successfully updated, 0 otherwise.
+
+Note that if `xolox#misc#perm#get()` and `xolox#misc#perm#set()` cannot be
+used to preserve the file owner/group/mode the file is still updated using
+a rename (for compatibility with non-UNIX systems and incompatible
+`/usr/bin/stat` implementations) so in that case you can still lose the
+file's owner/group/mode.
+
+#### The `xolox#misc#perm#get()` function
+
+Get the owner, group and permissions of the pathname given as the first
+argument. Returns an opaque value which you can later pass to
+`xolox#misc#perm#set()`.
+
+#### The `xolox#misc#perm#set()` function
+
+Set the permissions (the second argument) of the pathname given as the
+first argument. Expects a permissions value created by
+`xolox#misc#perm#get()`.
+
+### Persist/recall Vim values from/to files
+
+Vim's [string()][] function can be used to serialize Vim script values like
+numbers, strings, lists, dictionaries and composites of them to a string
+which can later be evaluated using the [eval()][] function to turn it back
+into the original value. This Vim script provides functions to use these
+functions to persist and recall Vim values from/to files. This is very
+useful for communication between (possibly concurrent) Vim processes.
+
+#### The `xolox#misc#persist#load()` function
+
+Read a Vim value like a number, string, list or dictionary from a file
+using [readfile()][] and [eval()][]. The first argument is the filename of
+the file to read (a string). The optional second argument specifies the
+default value which is returned when the file can't be loaded. This
+function returns the loaded value or the default value (which itself
+defaults to the integer 0).
+
+[eval()]: http://vimdoc.sourceforge.net/htmldoc/eval.html#eval()
+[readfile()]: http://vimdoc.sourceforge.net/htmldoc/eval.html#readfile()
+
+#### The `xolox#misc#persist#save()` function
+
+Write a Vim value like a number, string, list or dictionary to a file
+using [string()][] and [writefile()][]. The first argument is the filename
+of the file to write (a string) and the second argument is the value to
+write (any value).
+
+This function writes the serialized value to an intermediate file which is
+then renamed into place atomically. This avoids issues with concurrent
+processes where for example a producer has written a partial file which is
+read by a consumer before the file is complete. In this case the consumer
+would read a corrupt value. The rename trick avoids this problem.
+
+[string()]: http://vimdoc.sourceforge.net/htmldoc/eval.html#string()
+[writefile()]: http://vimdoc.sourceforge.net/htmldoc/eval.html#writefile()
+
+### String handling
+
+#### The `xolox#misc#str#slug()` function
+
+Convert a string to a "slug" - something that can be safely used in
+filenames and URLs without worrying about quoting/escaping of special
+characters.
+
+#### The `xolox#misc#str#ucfirst()` function
+
+Uppercase the first character in a string (the first argument).
+
+#### The `xolox#misc#str#compact()` function
+
+Compact whitespace in a string (the first argument).
+
+#### The `xolox#misc#str#trim()` function
+
+Trim all whitespace from the start and end of a string (the first
+argument).
+
+#### The `xolox#misc#str#indent()` function
+
+Indent all lines in a multi-line string (the first argument) with a
+specific number of *space characters* (the second argument, an integer).
+
+#### The `xolox#misc#str#dedent()` function
+
+Remove common whitespace from a multi line string.
+
+### Test runner & infrastructure for Vim plug-ins
+
+The Vim auto-load script `autoload/xolox/misc/test.vim` contains
+infrastructure that can be used to run an automated Vim plug-in test suite.
+It provides a framework for running test functions, keeping track of the
+test status, making assertions and reporting test results to the user.
+
+#### The `xolox#misc#test#reset()` function
+
+Reset counters for executed tests and passed/failed assertions.
+
+#### The `xolox#misc#test#summarize()` function
+
+Print a summary of test results, to be interpreted interactively.
+
+#### The `xolox#misc#test#wrap()` function
+
+Call a function in a try/catch block and prevent exceptions from bubbling.
+The name of the function should be passed as the first and only argument;
+it should be a string containing the name of a Vim auto-load function.
+
+#### The `xolox#misc#test#passed()` function
+
+Record a test which succeeded.
+
+#### The `xolox#misc#test#failed()` function
+
+Record a test which failed.
+
+#### The `xolox#misc#test#assert_true()` function
+
+Check whether an expression is true.
+
+#### The `xolox#misc#test#assert_equals()` function
+
+Check whether two values are the same.
+
+#### The `xolox#misc#test#assert_same_type()` function
+
+Check whether two values are of the same type.
+
+### Tests for the miscellaneous Vim scripts
+
+The Vim auto-load script `autoload/xolox/misc/tests.vim` contains the
+automated test suite of the miscellaneous Vim scripts. Right now the
+coverage is not very high yet, but this will improve over time.
+
+#### The `xolox#misc#tests#run()` function
+
+Run the automated test suite of the miscellaneous Vim scripts. To be used
+interactively. Intended to be safe to execute irrespective of context.
+
+#### The `xolox#misc#tests#pattern_escaping()` function
+
+Test escaping of regular expression patterns with
+`xolox#misc#escape#pattern()`.
+
+#### The `xolox#misc#tests#substitute_escaping()` function
+
+Test escaping of substitution strings with
+`xolox#misc#escape#substitute()`.
+
+#### The `xolox#misc#tests#shell_escaping()` function
+
+Test escaping of shell arguments with `xolox#misc#escape#shell()`.
+
+#### The `xolox#misc#tests#making_a_list_unique()` function
+
+Test removing of duplicate values from lists with
+`xolox#misc#list#unique()`.
+
+#### The `xolox#misc#tests#binary_insertion()` function
+
+Test the binary insertion algorithm implemented in
+`xolox#misc#list#binsert()`.
+
+#### The `xolox#misc#tests#getting_configuration_options()` function
+
+Test getting of scoped plug-in configuration "options" with
+`xolox#misc#option#get()`.
+
+#### The `xolox#misc#tests#splitting_of_multi_valued_options()` function
+
+Test splitting of multi-valued Vim options with
+`xolox#misc#option#split()`.
+
+#### The `xolox#misc#tests#joining_of_multi_valued_options()` function
+
+Test joining of multi-valued Vim options with `xolox#misc#option#join()`.
+
+#### The `xolox#misc#tests#finding_vim_on_the_search_path()` function
+
+Test looking up Vim's executable on the search path using [v:progname] []
+with `xolox#misc#os#find_vim()`.
+
+[v:progname]: http://vimdoc.sourceforge.net/htmldoc/eval.html#v:progname
+
+#### The `xolox#misc#tests#synchronous_command_execution()` function
+
+Test basic functionality of synchronous command execution with
+`xolox#misc#os#exec()`.
+
+#### The `xolox#misc#tests#synchronous_command_execution_with_stderr()` function
+
+Test basic functionality of synchronous command execution with
+`xolox#misc#os#exec()` including the standard error stream (not available
+on Windows when vim-shell is not installed).
+
+#### The `xolox#misc#tests#synchronous_command_execution_with_raising_of_errors()` function
+
+Test raising of errors during synchronous command execution with
+`xolox#misc#os#exec()`.
+
+#### The `xolox#misc#tests#synchronous_command_execution_without_raising_errors()` function
+
+Test synchronous command execution without raising of errors with
+`xolox#misc#os#exec()`.
+
+#### The `xolox#misc#tests#asynchronous_command_execution()` function
+
+Test the basic functionality of asynchronous command execution with
+`xolox#misc#os#exec()`. This runs the external command `mkdir` and tests
+that the side effect of creating the directory takes place. This might
+seem like a peculiar choice, but it's one of the few 100% portable
+commands (Windows + UNIX) that doesn't involve input/output streams.
+
+#### The `xolox#misc#tests#string_case_transformation()` function
+
+Test string case transformation with `xolox#misc#str#ucfirst()`.
+
+#### The `xolox#misc#tests#string_whitespace_compaction()` function
+
+Test compaction of whitespace in strings with `xolox#misc#str#compact()`.
+
+#### The `xolox#misc#tests#string_whitespace_trimming()` function
+
+Test trimming of whitespace in strings with `xolox#misc#str#trim()`.
+
+#### The `xolox#misc#tests#multiline_string_dedent()` function
+
+Test dedenting of multi-line strings with `xolox#misc#str#dedent()`.
+
+#### The `xolox#misc#tests#version_string_parsing()` function
+
+Test parsing of version strings with `xolox#misc#version#parse()`.
+
+#### The `xolox#misc#tests#version_string_comparison()` function
+
+Test comparison of version strings with `xolox#misc#version#at_least()`.
+
+### Timing of long during operations
+
+#### The `xolox#misc#timer#resumable()` function
+
+Create a resumable timer object. This returns an object (a dictionary with
+functions) with the following "methods":
+
+ - `start()` instructs the timer object to start counting elapsed time
+   (when a timer object is created it is not automatically started).
+
+ - `stop()` instructs the timer object to stop counting elapsed time.
+   This adds the time elapsed since `start()` was last called to the
+   total elapsed time. This method will raise an error if called out of
+   sequence.
+
+ - `format()` takes the total elapsed time and reports it as a string
+   containing a formatted floating point number.
+
+Timer objects are meant to accurately time short running operations so
+they're dependent on Vim's [reltime()][] and [reltimestr()][] functions.
+In order to make it possible to use timer objects in my Vim plug-ins
+unconditionally there's a fall back to [localtime()][] when [reltime()][]
+is not available. In this mode the timer objects are not very useful but
+at least they shouldn't raise errors.
+
+[localtime()]: http://vimdoc.sourceforge.net/htmldoc/eval.html#localtime()
+[reltime()]: http://vimdoc.sourceforge.net/htmldoc/eval.html#reltime()
+[reltimestr()]: http://vimdoc.sourceforge.net/htmldoc/eval.html#reltimestr()
+
+#### The `xolox#misc#timer#start()` function
+
+Start a timer. This returns a list which can later be passed to
+`xolox#misc#timer#stop()`.
+
+#### The `xolox#misc#timer#stop()` function
+
+Show a formatted debugging message to the user, if the user has enabled
+increased verbosity by setting Vim's ['verbose'] [verbose] option to one
+(1) or higher.
+
+This function has the same argument handling as Vim's [printf()] [printf]
+function with one difference: At the point where you want the elapsed time
+to be embedded, you write `%s` and you pass the list returned by
+`xolox#misc#timer#start()` as an argument.
+
+[verbose]: http://vimdoc.sourceforge.net/htmldoc/options.html#'verbose'
+[printf]: http://vimdoc.sourceforge.net/htmldoc/eval.html#printf()
+
+#### The `xolox#misc#timer#force()` function
+
+Show a formatted message to the user. This function has the same argument
+handling as Vim's [printf()] [printf] function with one difference: At the
+point where you want the elapsed time to be embedded, you write `%s` and
+you pass the list returned by `xolox#misc#timer#start()` as an argument.
+
+#### The `xolox#misc#timer#convert()` function
+
+Convert the value returned by `xolox#misc#timer#start()` to a string
+representation of the elapsed time since `xolox#misc#timer#start()` was
+called. Other values are returned unmodified (this allows using it with
+Vim's [map()][] function).
+
+[map()]: http://vimdoc.sourceforge.net/htmldoc/eval.html#map()
+
+### Version string handling
+
+#### The `xolox#misc#version#parse()` function
+
+Convert a version string to a list of integers.
+
+#### The `xolox#misc#version#at_least()` function
+
+Check whether the second version string is equal to or greater than the
+first version string. Returns 1 (true) when it is, 0 (false) otherwise.
+
+<!-- End of generated documentation -->
 
 ## Contact
 
-If you have questions, bug reports, suggestions, etc. the author can be contacted at <peter@peterodding.com>. The latest version is available at <http://peterodding.com/code/vim/easytags/> and <http://github.com/xolox/vim-easytags>. If you like this plug-in please vote for it on [Vim Online] [vim_online].
+If you have questions, bug reports, suggestions, etc. please open an issue or
+pull request on [GitHub] []. Download links and documentation can be found on
+the plug-in's [homepage] []. If you like the script please vote for it on
+[Vim Online] [].
 
 ## License
 
-This software is licensed under the [MIT license](http://en.wikipedia.org/wiki/MIT_License).  
-© 2014 Peter Odding &lt;<peter@peterodding.com>&gt; and Ingo Karkat.
-
-Thanks go out to everyone who has helped to improve the vim-easytags plug-in (whether through pull requests, bug reports or personal e-mails).
+This software is licensed under the [MIT license] [].  
+© 2014 Peter Odding &lt;<peter@peterodding.com>&gt;.
 
 
-[canon]: http://en.wikipedia.org/wiki/Canonicalization
-[code_complete]: http://www.vim.org/scripts/script.php?script_id=1764
-[ctags]: http://en.wikipedia.org/wiki/Ctags
-[ctags_cfg]: http://ctags.sourceforge.net/ctags.html#FILES
-[ctags_fts]: http://ctags.sourceforge.net/languages.html
-[ctrl_c]: http://vimdoc.sourceforge.net/htmldoc/pattern.html#CTRL-C
-[ctrl_mapping]: http://vimdoc.sourceforge.net/htmldoc/tagsrch.html#CTRL-]
-[cursorhold]: http://vimdoc.sourceforge.net/htmldoc/autocmd.html#CursorHold
-[cygwin]: http://en.wikipedia.org/wiki/Cygwin
-[dll]: http://en.wikipedia.org/wiki/Dynamic-link_library
-[download-easytags]: http://peterodding.com/code/vim/downloads/easytags.zip
-[download-misc]: http://peterodding.com/code/vim/downloads/misc.zip
-[e339]: http://vimdoc.sourceforge.net/htmldoc/message.html#E339
-[exctags]: http://ctags.sourceforge.net/
-[github-easytags]: http://github.com/xolox/vim-easytags
-[github-misc]: http://github.com/xolox/vim-misc
-[hlinks]: http://en.wikipedia.org/wiki/Hard_link
-[ide]: http://en.wikipedia.org/wiki/Integrated_development_environment
-[jsctags]: https://npmjs.org/package/jsctags
-[localtime]: http://vimdoc.sourceforge.net/htmldoc/eval.html#localtime()
-[messages]: http://vimdoc.sourceforge.net/htmldoc/message.html#:messages
-[neocomplcache]: http://www.vim.org/scripts/script.php?script_id=2620
-[pathogen]: http://www.vim.org/scripts/script.php?script_id=2332
-[shell]: http://peterodding.com/code/vim/shell/
-[slinks]: http://en.wikipedia.org/wiki/Symbolic_link
-[syn_groups]: http://vimdoc.sourceforge.net/htmldoc/syntax.html#group-name
-[system]: http://vimdoc.sourceforge.net/htmldoc/eval.html#system%28%29
-[tagfiles_fun]: http://vimdoc.sourceforge.net/htmldoc/eval.html#tagfiles%28%29
-[tags_opt]: http://vimdoc.sourceforge.net/htmldoc/options.html#%27tags%27
-[unlet]: http://vimdoc.sourceforge.net/htmldoc/eval.html#:unlet
-[updatetime]: http://vimdoc.sourceforge.net/htmldoc/options.html#'updatetime'
-[vim]: http://www.vim.org/
-[vim_fts]: http://ftp.vim.org/vim/runtime/syntax/
-[vim_online]: http://www.vim.org/scripts/script.php?script_id=3114
-[vimrc]: http://vimdoc.sourceforge.net/htmldoc/starting.html#vimrc
-[vundle]: https://github.com/gmarik/vundle
+[GitHub]: http://github.com/xolox/vim-misc
+[homepage]: http://peterodding.com/code/vim/misc
+[MIT license]: http://en.wikipedia.org/wiki/MIT_License
+[Pathogen]: http://www.vim.org/scripts/script.php?script_id=2332
+[plugins]: http://peterodding.com/code/vim/
+[repository]: https://github.com/xolox/vim-misc
+[Vim Online]: http://www.vim.org/scripts/script.php?script_id=4597
+[vim-tools]: http://peterodding.com/code/vim/tools/
+[Vundle]: https://github.com/gmarik/vundle
+[ZIP archive]: http://peterodding.com/code/vim/downloads/misc.zip
