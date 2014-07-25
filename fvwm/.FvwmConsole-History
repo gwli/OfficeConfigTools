@@ -1,0 +1,23 @@
+ls
+ls
+Exec exec ls
+help
+Module
+/?
+FvwmHelp
+FvwmXTerm
+FvwmGimp
+FvwmGimp
+FvwmATerm
+FvwmViewManPage
+FvwmViewManPage fvwm
+Exec exec vim
+Exec exec firefox
+Style "XTerm" Icon 48x48/terminal.png, NoActiveIconOverride, MiniIcon mini/terminal.png BackColor Black
+Style "ATerm" Icon 48x48/terminal.png, NoActiveIconOverride, MiniIcon mini/terminal.png BackColor Black
+Style "aterm" Icon 48x48/terminal.png, NoActiveIconOverride, MiniIcon mini/terminal.png BackColor Black
+Mouse 3 R N
+stroke 0 3 R N Menu WindowList Nop
+stroke 258 3 R N Exec exec xterm
+stroke 74159 3 R N Exec exec xterm
+stroke 456 3 R N Exec exec xterm
