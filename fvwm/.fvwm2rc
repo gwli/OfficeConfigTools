@@ -497,8 +497,8 @@ DestroyModuleConfig MyButtons: *
 *MyButtons: Font "Shadow=3:xft:Sans:Bold:pixelsize=14:minspace=True:antialias=True"
 *MyButtons: (1x2, Frame 0, Title(Center) "FVWM")
 *MyButtons: (1x5, Frame 0, Icon 48x48/terminal.png, \
-  Action(Mouse 1) "FvwmATerm", \
-  Action(Mouse 3) "FvwmGnomeTerm")
+  Action(Mouse 3) "FvwmATerm", \
+  Action(Mouse 1) "FvwmGnomeTerm")
 *MyButtons: (1x5, Frame 0, Icon 48x48/xmms.png, \
   Action(Mouse 1) "FvwmXmms")
 *MyButtons: (1x5, Frame 0, Icon 48x48/vim.png, \
