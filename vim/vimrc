@@ -1,7 +1,9 @@
 " for python added by victorli 2013-01-28
 filetype plugin on
+syntax on
 let g:pydiction_location = "~/.vim/ftplugin/pydiction/complete-dict"
 let g:pydiction_menu_height = 20
+let g:easytags_dynamic_files=2
 colorscheme darkblue
 nmap <F5> :!dict -d xdict <cword> \|colorit<cr>
 set modeline
