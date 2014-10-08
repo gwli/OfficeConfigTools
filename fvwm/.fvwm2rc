@@ -119,7 +119,8 @@ AddToFunc   FvwmGnomeTerm
 
 DestroyFunc FvwmATerm
 AddToFunc   FvwmATerm
-+ I Exec exec aterm -bg "Sandy Brown"
+#+ I Exec exec aterm -bg "Sandy Brown"
++ I Exec exec aterm -bg "Sandy Brown" -e ipython
 
 DestroyFunc FvwmGVim
 AddToFunc   FvwmGVim
