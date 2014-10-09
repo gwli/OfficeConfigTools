@@ -119,8 +119,7 @@ AddToFunc   FvwmGnomeTerm
 
 DestroyFunc FvwmATerm
 AddToFunc   FvwmATerm
-#+ I Exec exec aterm -bg "Sandy Brown"
-+ I Exec exec aterm -bg "Sandy Brown" -e ipython
++ I Exec exec rxvt-unicode -bg "Sandy Brown" -e ipython --profile=office
 
 DestroyFunc FvwmGVim
 AddToFunc   FvwmGVim
