@@ -2,10 +2,12 @@ import os
 
 def installlib():
     lib_list = [
+      "libatlas-base-dev",
       "python-dev",
       "libxml2-dev",
       "libxslt-dev",
       "NumPy",
+      "python-scipy",
       "python-matplotlib",
       "python-tornado",
       "Ipython",
@@ -17,6 +19,7 @@ def installlib():
 def install_pymodule():
     module_list = [
         "mlxtend",
+        #"sciPy",
         "prettyplotlib ",
         "scikit-learn",
         "Pandas",
