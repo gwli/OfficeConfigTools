@@ -12,6 +12,7 @@ def installlib():
       "python-tornado",
       "Ipython",
       "ipython-notebook",
+      "python-opencv",
     ]
 
     map(lambda x:os.system("apt-get install -y {}".format(x)),lib_list)
@@ -25,6 +26,7 @@ def install_pymodule():
         "Pandas",
         "gitpython",
         "nbdiff",
+        "NbConvert",
     ]
     
     map(lambda x:os.system("pip install  {}".format(x)),module_list)  
