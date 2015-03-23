@@ -2,8 +2,8 @@ import os
 
 def installlib():
     lib_list = [
-      "libatlas-base-dev",
-      "python-dev",
+      "libatlas-base-dev", 
+      "python-dev", "python-nose",
       "libxml2-dev",
       "libxslt-dev",
       "NumPy",
@@ -25,8 +25,9 @@ def install_pymodule():
         "scikit-learn",
         "Pandas",
         "gitpython",
-        "nbdiff",
-        "NbConvert",
+        #"nbdiff",
+        "Theano",
+        #"NbConvert",
     ]
     
     map(lambda x:os.system("pip install  {}".format(x)),module_list)  
