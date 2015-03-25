@@ -23,6 +23,7 @@ def install_pymodule():
         "prettyplotlib ",
         "scikit-learn",
         "Pandas",
+	"FLANN"
     ]
     
     map(lambda x:os.system("pip install  {}".format(x)),module_list)  
