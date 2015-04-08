@@ -24,11 +24,15 @@ def install_pymodule():
         "prettyplotlib ",
         "scikit-learn",
         "Pandas",
+        "gdb",
+        "gpy",
         "gitpython",
         #"nbdiff",
         "Theano", 
         "mpi4py",
-        "spectral"
+        "spectral",
+        "nolearn",
+        "sympy",
         #"NbConvert",
     ]
 
