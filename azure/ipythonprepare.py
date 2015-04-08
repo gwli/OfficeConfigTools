@@ -26,6 +26,7 @@ def install_pymodule():
         "Pandas",
         "gdb",
         "gpy",
+	"FLANN",
         "gitpython",
         #"nbdiff",
         "Theano", 
