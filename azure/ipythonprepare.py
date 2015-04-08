@@ -26,9 +26,12 @@ def install_pymodule():
         "Pandas",
         "gitpython",
         #"nbdiff",
-        "Theano",
+        "Theano", 
+        "mpi4py",
+        "spectral"
         #"NbConvert",
     ]
+
     
     map(lambda x:os.system("pip install  {}".format(x)),module_list)  
     
