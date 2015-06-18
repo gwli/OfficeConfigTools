@@ -9,7 +9,6 @@ def cleanup(path="."):
        "out",
        "bak",
        "blg",
-       "out.bak",
        "log",
        "bbl",
        "txt~",
@@ -19,7 +18,8 @@ def cleanup(path="."):
        "ilg",
        "synctex.gz",
        "tex.sav",
-
+       "tex.bak",
+       "out.bak",
     ]
     
     for root, dirs, files in os.walk(path):
