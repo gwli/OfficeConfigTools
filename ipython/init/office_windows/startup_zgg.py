@@ -1,5 +1,5 @@
 import sys
 
-sys.path.append("G:/git/OfficeConfigTools/ipython/book")
+sys.path.append("E:/git/OfficeConfigTools/ipython/book")
 #import
 import book as bk

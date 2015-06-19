@@ -13,6 +13,8 @@ def cleanup(path="."):
        "log",
        "bbl",
        "txt~",
+       "bib~",
+       "py~",
        "tex~",
        "nav",
        "ind",
