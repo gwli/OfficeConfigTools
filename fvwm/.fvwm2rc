@@ -27,10 +27,14 @@ ImagePath $[fvwm_icon]:$[fvwm_icon];.png:+
 #####
 # Virtual Desktops
 ###########
-DesktopSize 3x3
-DesktopName 0 MainAndFarm
-DesktopName 1 Nexus
-DesktopName 2 PentaK
+DesktopSize 2x3
+DesktopName 0 QuadD
+DesktopName 1 PentaK
+DesktopName 2 Squish
+DesktopName 3 Office
+DesktopName 4 Misc
+DesktopName 5 Study
+
 EdgeScroll 100 100
 EdgeResistance 150  150
 EdgeThickness 1
@@ -152,7 +156,7 @@ AddToFunc   FvwmViewManPage
 DestroyFunc StartFunction
 AddToFunc   StartFunction
 + I Module FvwmTaskBar
-+ I Module FvwmPager 0 2
++ I Module FvwmPager 0 5 
 + I Module FvwmButtons MyButtons
 
 DestroyFunc InitFunction
