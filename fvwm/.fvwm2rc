@@ -144,7 +144,8 @@ AddToFunc   FvwmIrssi
 
 DestroyFunc FvwmXmms
 AddToFunc   FvwmXmms
-+ I Exec exec xmms
++ I Exec exec gnome-terminal -e "vim -c :$ /network/vili/daily/dailyAccount.py"
+#+ I Exec exec xmms
 
 DestroyFunc FvwmViewManPage
 AddToFunc   FvwmViewManPage
