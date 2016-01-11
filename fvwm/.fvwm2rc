@@ -139,7 +139,8 @@ AddToFunc   FvwmFireFox
 
 DestroyFunc FvwmIrssi
 AddToFunc   FvwmIrssi
-+ I Exec exec aterm -e irssi
++ I Exec exec gnome-screensaver-command -l 
+#+ I Exec exec aterm -e irssi
 
 DestroyFunc FvwmXmms
 AddToFunc   FvwmXmms
@@ -348,6 +349,7 @@ AddToMenu   FvwmProgramsMenu "Programs" Title
 + "Xmms%menu/xmms.png%"  FvwmXmms
 + "XRoach-Invasion%menu/xroach.png%"  XRoachInvasion
 + "XRoach-Exterminate%menu/xroach.png%"  XRoachExterminate
+
 
 #####
 # FVWM Help Menu
