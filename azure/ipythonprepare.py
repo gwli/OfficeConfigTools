@@ -13,6 +13,8 @@ def installlib():
       "Ipython",
       "ipython-notebook",
       "python-opencv",
+       "python-gdb",
+      
     ]
 
     map(lambda x:os.system("apt-get install -y {}".format(x)),lib_list)
@@ -24,13 +26,19 @@ def install_pymodule():
         "prettyplotlib ",
         "scikit-learn",
         "Pandas",
+        "gpy",
 	"FLANN",
-=======
         "gitpython",
         #"nbdiff",
-        "Theano",
+        "Theano", 
+        "mpi4py",
+        "spectral",
+        "nolearn",
+        "sympy",
         #"NbConvert",
-	]
+    ]
+
+    
     map(lambda x:os.system("pip install  {}".format(x)),module_list)  
     
 def main():

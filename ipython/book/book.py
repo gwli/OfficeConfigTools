@@ -5,21 +5,25 @@ def cleanup(path="."):
     ext_list = [
        "swp",
        "rst~",
+       "py~",
        "aux",
        "out",
        "bak",
        "blg",
-       "out.bak",
        "log",
        "bbl",
        "txt~",
+       "bib~",
+       "py~",
        "tex~",
        "nav",
        "ind",
        "ilg",
        "synctex.gz",
        "tex.sav",
-
+       "tex.bak",
+       "out.bak",
+       "rst.swp"
     ]
     
     for root, dirs, files in os.walk(path):
